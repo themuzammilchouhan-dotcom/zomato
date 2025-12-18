@@ -39,6 +39,7 @@ export default function Login() {
     setLoading(false);
     if (error) {
       setError(error.message || "Failed to log in");
+       window.alert(error.message || "Failed to log in");
       return;
     }
     navigate(from, { replace: true });

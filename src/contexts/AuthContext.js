@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { supabase } from "../supabaseClient";
+import supabase from "../supabaseClient";
+
 
 const AuthContext = createContext();
 
@@ -17,6 +18,7 @@ export function AuthProvider({ children }) {
 
     if (error) {
       console.error("Error fetching profile:", error.message);
+      window.alert(error.message);
       return null;
     }
     return data;
@@ -30,11 +32,16 @@ export function AuthProvider({ children }) {
       if (!mounted) return;
       const authUser = data.session?.user ?? null;
       if (authUser) {
-        const profile = await fetchProfile(authUser.id);
-        setUser({
-          ...authUser,
-          role: profile?.role ?? "user",
-          full_name: profile?.full_name ?? "",
+        setUser(authUser); // set auth user immediately
+
+        fetchProfile(authUser.id).then((profile) => {
+          if (profile) {
+            setUser((prev) => ({
+              ...prev,
+              role: profile.role ?? "user",
+              full_name: profile.full_name ?? "",
+            }));
+          }
         });
       } else {
         setUser(null);
@@ -46,11 +53,16 @@ export function AuthProvider({ children }) {
     const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
       const authUser = session?.user ?? null;
       if (authUser) {
-        const profile = await fetchProfile(authUser.id);
-        setUser({
-          ...authUser,
-          role: profile?.role ?? "user",
-          full_name: profile?.full_name ?? "",
+        setUser(authUser);
+
+        fetchProfile(authUser.id).then((profile) => {
+          if (profile) {
+            setUser((prev) => ({
+              ...prev,
+              role: profile.role ?? "user",
+              full_name: profile.full_name ?? "",
+            }));
+          }
         });
       } else {
         setUser(null);
@@ -78,30 +90,30 @@ export function AuthProvider({ children }) {
     const authUser = data?.user;
 
     // 2. Create profile in profiles table
-  if (authUser) {
-  const { error: profileError } = await supabase
-    .from("profiles")
-    .insert([
-      {
-        id: authUser.id,
-        full_name,
-        role,
-        // optional: updated_at: new Date(), // only if column exists
+    if (authUser) {
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .insert([
+          {
+            id: authUser.id,
+            full_name,
+            role,
+            // optional: updated_at: new Date(), // only if column exists
+          }
+        ]);
+
+      if (profileError) {
+        setLoading(false);
+        return { data, error: profileError };
       }
-    ]);
 
-  if (profileError) {
-    setLoading(false);
-    return { data, error: profileError };
-  }
-
-  // Merge role into context
-  setUser({
-    ...authUser,
-    role,
-    full_name,
-  });
-}
+      // Merge role into context
+      setUser({
+        ...authUser,
+        role,
+        full_name,
+      });
+    }
 
 
     setLoading(false);
