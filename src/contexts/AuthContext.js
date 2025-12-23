@@ -12,7 +12,7 @@ export function AuthProvider({ children }) {
   const fetchProfile = async (userId) => {
     const { data, error } = await supabase
       .from("profiles")
-      .select("role, full_name")
+      .select("role, full_name, city")
       .eq("id", userId)
       .single();
 
@@ -24,57 +24,47 @@ export function AuthProvider({ children }) {
     return data;
   };
 
-  useEffect(() => {
-    let mounted = true;
+ useEffect(() => {
+  let mounted = true;
 
-    // Get initial session
-    supabase.auth.getSession().then(async ({ data }) => {
-      if (!mounted) return;
-      const authUser = data.session?.user ?? null;
-      if (authUser) {
-        setUser(authUser); // set auth user immediately
+  const loadUser = async () => {
+    setLoading(true);
 
-        fetchProfile(authUser.id).then((profile) => {
-          if (profile) {
-            setUser((prev) => ({
-              ...prev,
-              role: profile.role ?? "user",
-              full_name: profile.full_name ?? "",
-            }));
-          }
-        });
-      } else {
-        setUser(null);
-      }
+    const { data: { session } } = await supabase.auth.getSession();
+    const authUser = session?.user;
+
+    if (!mounted) return;
+
+    if (!authUser) {
+      setUser(null);
       setLoading(false);
+      return;
+    }
+
+    const profile = await fetchProfile(authUser.id);
+
+    setUser({
+      ...authUser,
+      role: profile?.role ?? "buyer",
+      full_name: profile?.full_name ?? "",
+      city: profile?.city ?? null,
     });
 
-    // Listen to auth state changes
-    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      const authUser = session?.user ?? null;
-      if (authUser) {
-        setUser(authUser);
+    setLoading(false);
+  };
 
-        fetchProfile(authUser.id).then((profile) => {
-          if (profile) {
-            setUser((prev) => ({
-              ...prev,
-              role: profile.role ?? "user",
-              full_name: profile.full_name ?? "",
-            }));
-          }
-        });
-      } else {
-        setUser(null);
-      }
-      setLoading(false);
-    });
+  loadUser();
 
-    return () => {
-      mounted = false;
-      listener?.subscription?.unsubscribe();
-    };
-  }, []);
+  const { data: listener } = supabase.auth.onAuthStateChange(() => {
+    loadUser();
+  });
+
+  return () => {
+    mounted = false;
+    listener?.subscription?.unsubscribe();
+  };
+}, []);
+
 
   // Sign up and create profile
   const signUp = async (email, password, full_name = null, role = "user") => {
@@ -112,6 +102,7 @@ export function AuthProvider({ children }) {
         ...authUser,
         role,
         full_name,
+        
       });
     }
 
@@ -122,21 +113,35 @@ export function AuthProvider({ children }) {
 
   // Sign in
   const signIn = async (email, password) => {
-    setLoading(true);
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  setLoading(true);
 
-    if (data?.user) {
-      const profile = await fetchProfile(data.user.id);
-      setUser({
-        ...data.user,
-        role: profile?.role ?? "user",
-        full_name: profile?.full_name ?? "",
-      });
-    }
+  const { data: authData, error } =
+    await supabase.auth.signInWithPassword({ email, password });
 
+  if (error) {
     setLoading(false);
-    return { data, error };
-  };
+    return { user: null, error };
+  }
+
+  if (authData?.user) {
+    const profile = await fetchProfile(authData.user.id);
+
+    const mergedUser = {
+      ...authData.user,
+      role: profile?.role ?? "buyer",
+      full_name: profile?.full_name ?? "",
+      city: profile?.city ?? null,
+    };
+
+    setUser(mergedUser);
+    setLoading(false);
+
+    return { user: mergedUser, error: null };
+  }
+
+  setLoading(false);
+  return { user: null, error: null };
+};
 
   // Sign out
   const signOut = async () => {

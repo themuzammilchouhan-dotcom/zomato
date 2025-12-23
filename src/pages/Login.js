@@ -1,16 +1,11 @@
-import React, { useState, useEffect } from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { Form, Button, Card, Alert, Spinner } from "react-bootstrap";
 import { useAuth } from "../contexts/AuthContext";
 
 export default function Login() {
   const { signIn, user } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
-  const from = location.state?.from?.pathname || "/";
-
-  useEffect(() => {
-    if (user) navigate("/", { replace: true });
-  }, [user, navigate]);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -19,71 +14,92 @@ export default function Login() {
 
   const validate = () => {
     if (!email.trim()) return "Email is required";
-    // simple email check
     if (!/^\S+@\S+\.\S+$/.test(email)) return "Enter a valid email";
     if (!password) return "Password is required";
     return null;
   };
 
-  async function handleSubmit(e) {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-    const v = validate();
-    if (v) {
-      setError(v);
+
+    const validationError = validate();
+    if (validationError) {
+      setError(validationError);
       return;
     }
 
     setLoading(true);
-    const { error } = await signIn(email, password);
+    const { error,user } = await signIn(email, password);
     setLoading(false);
+
     if (error) {
-      setError(error.message || "Failed to log in");
-       window.alert(error.message || "Failed to log in");
+      setError(error.message || "Invalid email or password");
       return;
     }
-    navigate(from, { replace: true });
-  }
+
+    // Role-based redirect
+    console.log("kjhsakjhfkjas",user,user?.role == "seller");
+    if (user?.role == "seller") {
+      navigate("/seller");
+    } else {
+      navigate("/buyer");
+    }
+  };
 
   return (
-    <div style={{ maxWidth: 420, margin: "40px auto", padding: 24, border: "1px solid #eee", borderRadius: 8 }}>
-      <h2 style={{ marginTop: 0 }}>Log in</h2>
-      <form onSubmit={handleSubmit}>
-        <label style={{ display: "block", marginBottom: 8 }}>
-          Email
-          <input
-            style={{ width: "100%", padding: 8, marginTop: 6 }}
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            type="email"
-            required
-          />
-        </label>
-        <label style={{ display: "block", marginBottom: 8 }}>
-          Password
-          <input
-            style={{ width: "100%", padding: 8, marginTop: 6 }}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            type="password"
-            required
-          />
-        </label>
+    <div className="d-flex justify-content-center align-items-center min-vh-100 bg-light px-3">
+      <Card style={{ maxWidth: 420 }} className="w-100 shadow-sm">
+        <Card.Body>
+          <h4 className="text-center mb-4">Sign In</h4>
 
-        {error && <div style={{ color: "red", marginBottom: 8 }}>{error}</div>}
+          {error && <Alert variant="danger">{error}</Alert>}
 
-        <button
-          type="submit"
-          disabled={loading}
-          style={{ padding: "10px 16px", background: "#0b69ff", color: "#fff", border: "none", borderRadius: 4 }}
-        >
-          {loading ? "Signing in..." : "Sign in"}
-        </button>
-      </form>
+          <Form onSubmit={handleSubmit}>
+            <Form.Group className="mb-3">
+              <Form.Label>Email</Form.Label>
+              <Form.Control
+                type="email"
+                placeholder="Enter your email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={loading}
+              />
+            </Form.Group>
 
-      <p style={{ marginTop: 12 }}>
-        Need an account? <Link to="/signup">Sign up</Link>
-      </p>
+            <Form.Group className="mb-3">
+              <Form.Label>Password</Form.Label>
+              <Form.Control
+                type="password"
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
+              />
+            </Form.Group>
+
+            <Button
+              type="submit"
+              className="w-100"
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <Spinner size="sm" animation="border" /> Signing in...
+                </>
+              ) : (
+                "Sign In"
+              )}
+            </Button>
+          </Form>
+
+          <div className="text-center mt-3">
+            <small>
+              Don’t have an account? <Link to="/signup">Sign up</Link>
+            </small>
+          </div>
+        </Card.Body>
+      </Card>
     </div>
   );
 }

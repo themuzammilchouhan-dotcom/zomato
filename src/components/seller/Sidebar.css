@@ -1,0 +1,46 @@
+.sidebar {
+  width: 220px;
+  min-height: 100vh;
+  background-color: #ffffff;
+  border-right: 1px solid #ddd;
+  padding: 15px;
+  transition: width 0.3s;
+}
+
+.sidebar.collapsed {
+  width: 60px;
+}
+
+.sidebar-header {
+  text-align: center;
+  font-weight: bold;
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #333;
+  padding: 10px 8px;
+  border-radius: 5px;
+  margin-bottom: 4px;
+  transition: background 0.2s, color 0.2s;
+}
+
+.nav-link:hover,
+.nav-link.active {
+  background-color: #f0f0f0;
+  color: #007bff;
+}
+
+button.btn-light {
+  display: block;
+  margin: 0 auto;
+}
+
+button.btn-outline-danger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}

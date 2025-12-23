@@ -111,8 +111,8 @@ export default function Signup() {
             onChange={(e) => setRole(e.target.value)}
             required
           >
-            <option value="user">User</option>
-            <option value="admin">Admin</option>
+            <option value="buyer">Buyer</option>
+            <option value="seller">Seller</option>
           </select>
         </label>
 
